@@ -132,11 +132,11 @@ class Trainer(object):
             for data in self.train_dl:
                 self.opt.zero_grad()
                 data = data.to(self.device)
-                data_norm = self.normalize(data)
+                data_norm = self.normalize(data, self.train_mean, self.train_std)
                 self.model.train()
                 if self.scaler is not None:
                     with torch.cuda.amp.autocast():
-                        loss, aloss = self.model(data)
+                        loss, aloss = self.model(data_norm)
                     self.scaler.scale(loss).backward()
                     self.scaler.scale(aloss).backward()
                     self.scaler.unscale_(self.opt)
@@ -144,7 +144,7 @@ class Trainer(object):
                     self.scaler.step(self.opt)
                     self.scaler.update()
                 else:
-                    loss, aloss = self.model(data)
+                    loss, aloss = self.model(data_norm)
                     loss.backward()
                     aloss.backward()
                     torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
@@ -159,9 +159,9 @@ class Trainer(object):
                 bpps = []
                 mses = []
                 for i, batch in enumerate(self.val_dl):
-                    batch_norm = self.normalize(batch)
-                    batch_norm = batch_norm.to(self.device)
                     batch = batch.to(self.device)
+                    batch_norm = self.normalize(batch, self.val_mean, self.val_std)
+                    batch_norm = batch_norm.to(self.device)
                     if i >= self.val_num_of_batch:
                         break
                     self.ema.ema_model.eval()
@@ -169,7 +169,7 @@ class Trainer(object):
                         batch_norm, self.sample_steps
                     )
                     bpps.append(bpp)
-                    mse = torch.nn.functional.mse_loss(batch, compressed)
+                    mse = torch.nn.functional.mse_loss(batch, compressed * self.val_std + self.val_mean)
                     mses.append(mse)
                 self.writer.add_scalar(
                     f"mse/num{i}",

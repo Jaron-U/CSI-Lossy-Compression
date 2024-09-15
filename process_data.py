@@ -12,7 +12,6 @@ from torch.utils.data import Dataset, DataLoader
 from math import sqrt
 from PIL import Image
 import torchvision.transforms as T
-import numpy as np
 
 class DeepVerseChallengeLoaderOne(Dataset):
     def __init__(self, csv_path,
@@ -64,10 +63,6 @@ if __name__ == '__main__':
     for i, H in enumerate(train_loader):
         print(H.shape) # torch.Size([4, 2, 64, 64])
         break
-    mean, std = cal_mean_std(train_loader, train_dataset.__len__())
-
-    np.save("mean.npy", mean.numpy())
-    np.save("std.npy", std.numpy())
     
 
 class DeepVerseChallengeLoaderTwo(Dataset):
