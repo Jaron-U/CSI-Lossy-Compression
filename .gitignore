@@ -1,0 +1,7 @@
+/params_cdc_ldm
+/radar
+/RGB_images
+/tblogs_cdc_ldm
+/wireless
+*.csv
+__pycache__
