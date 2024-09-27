@@ -5,3 +5,4 @@
 /wireless
 *.csv
 __pycache__
+*.out

@@ -4,13 +4,16 @@ from modules.denoising_diffusion import GaussianDiffusion
 from modules.unet import Unet
 from modules.compress_modules import ResnetCompressor
 from ema_pytorch import EMA
-from process_data import load_data
+from process_data import load_data, cal_mean_std
 import torch.nn.functional as F
 import pandas as pd
 import os
 import math
+from torch.utils.tensorboard import SummaryWriter
+import matplotlib.pyplot as plt
+import seaborn as sns 
 
-ptpath = "params_cdc_ldm/CSI-l2-use_weight5-challenge_data_3-d32-t8193-b1e-05-x-cosine-01-float32-aux0/CSI-l2-use_weight5-challenge_data_3-d32-t8193-b1e-05-x-cosine-01-float32-aux0_2.pt"
+ptpath = "params_cdc_ldm/CSI-l2-use_weight5-challenge_data_3-d32-t8193-b0.0128-x-cosine-01-float32-aux0/CSI-l2-use_weight5-challenge_data_3-d32-t8193-b0.0128-x-cosine-01-float32-aux0_0.pt"
 parser = argparse.ArgumentParser(description="values from bash script")
 
 parser.add_argument("--ckpt", type=str, default=ptpath) # ckpt path
@@ -76,22 +79,54 @@ def main(rank):
     _, test_loader = load_data(
         1,
         num_workers=1,
+        shuffle=False
     )
 
-    for data in test_loader:
-        data = data.to(rank)
-        compressed, bpp = diffusion.compress(
-                    data,
-                    sample_steps=config.n_denoise_step,
-                    bpp_return_mean=True,
-                    init=torch.randn_like(data) * config.gamma
-                    )
-        mse = torch.nn.functional.mse_loss(data, compressed)
-        print("orgin", data)
-        print("compressed", compressed)
-        print(mse, bpp)
-        break
+    writer = SummaryWriter('evaluateBlog/cdc')
+    mean, std = cal_mean_std(test_loader, test_loader.__len__())
+    mean = mean.to(rank)
+    std = std.to(rank)
 
+
+    for i, data in enumerate(test_loader):
+        if i >= 10:
+            break
+        data = data.to(rank)
+        data_norm = (data - mean) / std
+        data_norm = data_norm.to(rank)
+        compressed, bpp = diffusion.compress(
+            data_norm,
+            sample_steps=config.n_denoise_step,
+            bpp_return_mean=True,
+            init=torch.randn_like(data_norm) * config.gamma
+        )
+        mse = torch.nn.functional.mse_loss(data, compressed * std + mean)
+        get_diff_heatmap(writer, data, compressed, mse, bpp, i)
+    
+    writer.close()
+
+def get_diff_heatmap(writer, original, compressed, mse, bpp, step):
+    abs_difference = torch.abs(original - compressed)[0]
+    sq_difference = ((original - compressed) ** 2)[0]
+    fig, axes = plt.subplots(4, 1, figsize=(10, 32))  # 四行一列
+
+    sns.heatmap(abs_difference.cpu().numpy()[0], ax=axes[0], cmap="viridis")
+    axes[0].set_title("Channel 1 - Absolute Difference Heatmap")
+
+    sns.heatmap(sq_difference.cpu().numpy()[0], ax=axes[1], cmap="viridis")
+    axes[1].set_title("Channel 1 - Squared Difference Heatmap")
+
+    sns.heatmap(abs_difference.cpu().numpy()[1], ax=axes[2], cmap="viridis")
+    axes[2].set_title("Channel 2 - Absolute Difference Heatmap")
+
+    sns.heatmap(sq_difference.cpu().numpy()[1], ax=axes[3], cmap="viridis")
+    axes[3].set_title("Channel 2 - Squared Difference Heatmap")
+
+    writer.add_figure("Difference Heatmaps by Channel", fig, global_step=step)
+    plt.close(fig)
+
+    writer.add_scalar('MSE', mse.item(), step)
+    writer.add_scalar('BPP', bpp, step)
 
 if __name__ == "__main__":
     main(config.device)

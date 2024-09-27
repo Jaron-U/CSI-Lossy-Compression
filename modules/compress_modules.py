@@ -86,8 +86,6 @@ class Compressor(nn.Module):
             q_latent = quantize(latent, "dequantize", latent_distribution.mean)
         hyper_rate = -self.prior.likelihood(q_hyper_latent).log2()
         cond_rate = -latent_distribution.likelihood(q_latent).log2()
-        temp = hyper_rate.sum(dim=(1, 2, 3))
-        temp2 = cond_rate.sum(dim=(1, 2, 3))
         bpp = (hyper_rate.sum(dim=(1, 2, 3)) + cond_rate.sum(dim=(1, 2, 3))) / (H * W)
         return bpp
 

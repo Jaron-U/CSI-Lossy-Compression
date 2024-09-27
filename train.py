@@ -9,7 +9,7 @@ import torch
 
 parser = argparse.ArgumentParser(description="values from bash script")
 parser.add_argument("--device", type=int, default=0, help="cuda device id")
-parser.add_argument("--beta", type=float, default=1e-5, help="beta for bitrate control")
+parser.add_argument("--beta", type=float, default=0.0128, help="beta for bitrate control")
 parser.add_argument("--data_channels", type=int, default=2)
 parser.add_argument("--lr", type=float, default=1e-3)
 parser.add_argument("--decay", type=float, default=0.8)
@@ -18,8 +18,8 @@ parser.add_argument("--optimizer", type=str, default="adam")
 parser.add_argument("--n_workers", type=int, default=4)
 parser.add_argument("--n_step", type=int, default=100) # 1000000
 parser.add_argument("--scheduler_checkpoint_step", type=int, default=10) # 1000000
-parser.add_argument("--log_checkpoint_step", type=int, default=10) # 5000
-parser.add_argument("--load_model", default=False, action="store_true")
+parser.add_argument("--log_checkpoint_step", type=int, default=1) # 5000
+parser.add_argument("--load_model", default=True, action="store_true")
 parser.add_argument("--load_step", action="store_true")
 parser.add_argument("--batch_size", type=int, default=16)
 parser.add_argument('--pred_mode', type=str, default='x', help='prediction mode')
@@ -124,6 +124,6 @@ if __name__ == "__main__":
 
     if config.load_model:
         print('loaded')
-        trainer.load(idx=0, load_step=config.load_step)
+        trainer.load(idx=1, load_step=config.load_step)
 
     trainer.train()

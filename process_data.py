@@ -48,12 +48,12 @@ def cal_mean_std(loader, num_samples):
     
     return mean, std
 
-def load_data(batch_size=4, num_workers=4):
+def load_data(batch_size=4, num_workers=4, shuffle=True):
     train_dataset = DeepVerseChallengeLoaderOne(csv_path = "dataset_train.csv")
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
     test_dataset = DeepVerseChallengeLoaderOne(csv_path = "dataset_test.csv")
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     
     return train_loader, test_loader
 
