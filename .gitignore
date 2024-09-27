@@ -6,3 +6,4 @@
 *.csv
 __pycache__
 *.out
+evaluateBlog/
